@@ -5,10 +5,12 @@
 <title>Tennis Pong</title>
 <style>
   :root {
-    --court: #1c6b3a;
-    --court-line: #f4f4f4;
-    --panel-bg: #10241a;
-    --accent: #e8ff5e;
+    --navy: #061c30;
+    --navy-light: #0f3357;
+    --navy-row: #123a5e;
+    --accent: #d4f04a;
+    --accent-dim: #9cb23a;
+    --court-green: #0d4a34;
   }
   * { box-sizing: border-box; }
   body {
@@ -18,10 +20,10 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    background: #0b1a12;
+    background: radial-gradient(circle at 50% 0%, #0a1f33 0%, #050e18 70%);
     font-family: 'Segoe UI', Tahoma, Verdana, sans-serif;
     color: #f2f2f2;
-    gap: 14px;
+    gap: 12px;
     padding: 16px;
   }
   h1 {
@@ -29,35 +31,84 @@
     font-size: 1.6rem;
     letter-spacing: 1px;
     color: var(--accent);
-    text-shadow: 0 0 12px rgba(232,255,94,0.4);
+    text-shadow: 0 0 12px rgba(212,240,74,0.4);
   }
+  h1 span {
+    display: block;
+    font-size: 0.7rem;
+    letter-spacing: 3px;
+    color: #7fa0c0;
+    font-weight: normal;
+    text-transform: uppercase;
+    text-shadow: none;
+  }
+
+  /* ---------- Scoreboard ---------- */
   #scoreboard {
-    display: flex;
-    gap: 24px;
-    background: var(--panel-bg);
-    border: 2px solid #2f5a3f;
-    border-radius: 10px;
-    padding: 10px 24px;
-    font-size: 1.05rem;
-    min-width: 420px;
-    justify-content: center;
+    background: linear-gradient(180deg, var(--navy) 0%, #041220 100%);
+    border: 1px solid #1c4468;
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.03);
+    padding: 4px;
+    min-width: 460px;
+    overflow: hidden;
   }
-  .side {
-    display: flex;
-    flex-direction: column;
+  .sb-header, .sb-row {
+    display: grid;
+    grid-template-columns: 22px 1fr 34px 34px 34px 52px;
     align-items: center;
-    min-width: 120px;
   }
-  .side .label { font-size: 0.8rem; color: #9fd8b3; text-transform: uppercase; letter-spacing: 1px; }
-  .side .point { font-size: 1.8rem; font-weight: bold; color: var(--accent); }
-  .side .games { font-size: 0.85rem; color: #cfe; margin-top: 2px; }
-  .side .sets { font-size: 0.85rem; color: #7fbf94; }
+  .sb-header {
+    padding: 5px 12px;
+    font-size: 0.62rem;
+    letter-spacing: 1px;
+    color: #6f93b8;
+    text-transform: uppercase;
+    border-bottom: 1px solid #1c4468;
+  }
+  .sb-header .sb-col { text-align: center; }
+  .sb-row {
+    padding: 7px 12px;
+    background: var(--navy-light);
+  }
+  .sb-row:nth-child(3) { background: var(--navy-row); }
+  .sb-serve {
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 6px var(--accent);
+    visibility: hidden;
+  }
+  .sb-name {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #fff;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .sb-col {
+    text-align: center;
+    font-size: 0.95rem;
+    color: #cfe0f0;
+    font-variant-numeric: tabular-nums;
+  }
+  .sb-points-col {
+    background: rgba(212,240,74,0.12);
+    border-radius: 4px;
+    color: var(--accent);
+    font-weight: bold;
+    font-size: 1.05rem;
+    padding: 2px 0;
+  }
+
   canvas {
-    background: var(--court);
-    border: 4px solid #eee;
-    border-radius: 6px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-    max-width: 92vw;
+    border: 3px solid #eee;
+    border-radius: 4px;
+    box-shadow: 0 14px 34px rgba(0,0,0,0.6);
+    max-width: 94vw;
+    height: auto;
   }
   #status {
     min-height: 1.4em;
@@ -66,40 +117,53 @@
     text-align: center;
   }
   #instructions {
-    max-width: 820px;
+    max-width: 840px;
     text-align: center;
     font-size: 0.85rem;
-    color: #b8d9c3;
+    color: #a9c3da;
     line-height: 1.5;
   }
   #instructions kbd {
-    background: #234;
+    background: #16344f;
     padding: 2px 7px;
     border-radius: 4px;
-    border: 1px solid #456;
+    border: 1px solid #2d5478;
     font-size: 0.8rem;
+    color: #eaf3ff;
   }
 </style>
 </head>
 <body>
-  <h1>🎾 Tennis Pong</h1>
+  <h1>🎾 Tennis Pong<span>Australian Open&nbsp;&mdash;&nbsp;Inspired Court &amp; Scoreboard</span></h1>
 
   <div id="scoreboard">
-    <div class="side">
-      <div class="label" id="p1name">Player (You)</div>
-      <div class="point" id="p1point">Love</div>
-      <div class="games" id="p1games">Games: 0</div>
-      <div class="sets" id="p1sets">Sets: 0</div>
+    <div class="sb-header">
+      <div></div>
+      <div>Player</div>
+      <div class="sb-col">S1</div>
+      <div class="sb-col">S2</div>
+      <div class="sb-col">S3</div>
+      <div class="sb-col">Pts</div>
     </div>
-    <div class="side">
-      <div class="label" id="p2name">Computer</div>
-      <div class="point" id="p2point">Love</div>
-      <div class="games" id="p2games">Games: 0</div>
-      <div class="sets" id="p2sets">Sets: 0</div>
+    <div class="sb-row">
+      <div class="sb-serve" id="serve0"></div>
+      <div class="sb-name" id="p1name">Player (You)</div>
+      <div class="sb-col" id="p1set0">&nbsp;</div>
+      <div class="sb-col" id="p1set1">&nbsp;</div>
+      <div class="sb-col" id="p1set2">&nbsp;</div>
+      <div class="sb-col sb-points-col" id="p1point">0</div>
+    </div>
+    <div class="sb-row">
+      <div class="sb-serve" id="serve1"></div>
+      <div class="sb-name" id="p2name">Computer</div>
+      <div class="sb-col" id="p2set0">&nbsp;</div>
+      <div class="sb-col" id="p2set1">&nbsp;</div>
+      <div class="sb-col" id="p2set2">&nbsp;</div>
+      <div class="sb-col sb-points-col" id="p2point">0</div>
     </div>
   </div>
 
-  <canvas id="court" width="800" height="500"></canvas>
+  <canvas id="court" width="980" height="480"></canvas>
 
   <div id="status">Press SPACE to serve</div>
 
@@ -125,17 +189,36 @@
   const p2NameEl = document.getElementById('p2name');
   const p1PointEl = document.getElementById('p1point');
   const p2PointEl = document.getElementById('p2point');
-  const p1GamesEl = document.getElementById('p1games');
-  const p2GamesEl = document.getElementById('p2games');
-  const p1SetsEl = document.getElementById('p1sets');
-  const p2SetsEl = document.getElementById('p2sets');
+  const serve0El = document.getElementById('serve0');
+  const serve1El = document.getElementById('serve1');
+  const setCols = [
+    [document.getElementById('p1set0'), document.getElementById('p2set0')],
+    [document.getElementById('p1set1'), document.getElementById('p2set1')],
+    [document.getElementById('p1set2'), document.getElementById('p2set2')],
+  ];
+
+  // ---------- Court geometry (Australian Open blue hard-court layout) ----------
+  const court = {
+    left: 70, right: W - 70,
+    top: 50, bottom: H - 50,
+  };
+  court.width = court.right - court.left;
+  court.height = court.bottom - court.top;
+  court.centerX = (court.left + court.right) / 2;
+  court.centerY = (court.top + court.bottom) / 2;
+  const alleyInset = court.height * (4.5 / 36);       // doubles alley width
+  court.singlesTop = court.top + alleyInset;
+  court.singlesBottom = court.bottom - alleyInset;
+  const serviceOffset = (court.width / 2) * (21 / 39); // service line distance from net
+  court.serviceLeftX = court.centerX - serviceOffset;
+  court.serviceRightX = court.centerX + serviceOffset;
 
   // ---------- Game objects ----------
-  const PADDLE_W = 14, PADDLE_H = 90, PADDLE_SPEED = 6.5;
+  const PADDLE_W = 14, PADDLE_H = 100, PADDLE_SPEED = 6.5;
   const BALL_R = 9;
 
-  const leftPaddle = { x: 24, y: H / 2 - PADDLE_H / 2, w: PADDLE_W, h: PADDLE_H, dy: 0, speed: PADDLE_SPEED };
-  const rightPaddle = { x: W - 24 - PADDLE_W, y: H / 2 - PADDLE_H / 2, w: PADDLE_W, h: PADDLE_H, dy: 0, speed: PADDLE_SPEED };
+  const leftPaddle = { x: 26, y: H / 2 - PADDLE_H / 2, w: PADDLE_W, h: PADDLE_H, speed: PADDLE_SPEED };
+  const rightPaddle = { x: W - 26 - PADDLE_W, y: H / 2 - PADDLE_H / 2, w: PADDLE_W, h: PADDLE_H, speed: PADDLE_SPEED };
 
   const ball = { x: W / 2, y: H / 2, r: BALL_R, vx: 0, vy: 0, speed: 5.5 };
 
@@ -148,11 +231,12 @@
   const keys = {};
 
   // ---------- Tennis scoring ----------
-  const POINT_NAMES = ['Love', '15', '30', '40'];
+  const POINT_NAMES = ['0', '15', '30', '40'];
   const match = {
-    points: [0, 0],   // current game points
-    games: [0, 0],    // current set games
-    sets: [0, 0],     // sets won
+    points: [0, 0],     // current game points
+    games: [0, 0],      // current set games
+    sets: [0, 0],       // sets won
+    setHistory: [],     // completed sets: [ [g0,g1], ... ]
     tiebreak: false,
     tbPoints: [0, 0],
   };
@@ -161,9 +245,11 @@
     match.points = [0, 0];
     match.games = [0, 0];
     match.sets = [0, 0];
+    match.setHistory = [];
     match.tiebreak = false;
     match.tbPoints = [0, 0];
     matchOver = false;
+    servingSide = 0;
     updateScoreboardLabels();
     renderScore();
     statusEl.textContent = 'Press SPACE to serve';
@@ -180,19 +266,31 @@
     const p = match.points[i];
     const o = match.points[other];
     if (p >= 3 && o >= 3) {
-      if (p === o) return 'Deuce';
-      return p > o ? 'Ad' : '—';
+      if (p === o) return 'D';
+      return p > o ? 'AD' : '';
     }
     return POINT_NAMES[p] || '40';
   }
 
   function renderScore() {
-    p1PointEl.textContent = pointDisplay(0);
-    p2PointEl.textContent = pointDisplay(1);
-    p1GamesEl.textContent = 'Games: ' + match.games[0];
-    p2GamesEl.textContent = 'Games: ' + match.games[1];
-    p1SetsEl.textContent = 'Sets: ' + match.sets[0];
-    p2SetsEl.textContent = 'Sets: ' + match.sets[1];
+    p1PointEl.textContent = matchOver ? '' : pointDisplay(0);
+    p2PointEl.textContent = matchOver ? '' : pointDisplay(1);
+
+    for (let i = 0; i < 3; i++) {
+      let v0 = ' ', v1 = ' ';
+      if (i < match.setHistory.length) {
+        v0 = match.setHistory[i][0];
+        v1 = match.setHistory[i][1];
+      } else if (i === match.setHistory.length && !matchOver) {
+        v0 = match.games[0];
+        v1 = match.games[1];
+      }
+      setCols[i][0].textContent = v0;
+      setCols[i][1].textContent = v1;
+    }
+
+    serve0El.style.visibility = (!matchOver && servingSide === 0) ? 'visible' : 'hidden';
+    serve1El.style.visibility = (!matchOver && servingSide === 1) ? 'visible' : 'hidden';
   }
 
   function awardPoint(scorer) {
@@ -227,6 +325,7 @@
   }
 
   function winSet(winner) {
+    match.setHistory.push([match.games[0], match.games[1]]);
     match.sets[winner]++;
     match.games = [0, 0];
     match.points = [0, 0];
@@ -269,11 +368,8 @@
     ball.vy = 0;
     ball.x = W / 2;
     ball.y = H / 2;
-    if (!matchOver) {
-      statusEl.textContent = (statusEl.textContent || '') || 'Press SPACE to serve';
-      if (!/wins|Tiebreak|Set to/.test(statusEl.textContent)) {
-        statusEl.textContent = 'Press SPACE to serve';
-      }
+    if (!matchOver && !/wins|Tiebreak|Set to/.test(statusEl.textContent)) {
+      statusEl.textContent = 'Press SPACE to serve';
     }
   }
 
@@ -301,11 +397,9 @@
   window.addEventListener('keyup', (e) => { keys[e.key] = false; });
 
   function updatePaddles() {
-    // Right paddle: always human via arrow keys
     if (keys['ArrowUp']) rightPaddle.y -= rightPaddle.speed;
     if (keys['ArrowDown']) rightPaddle.y += rightPaddle.speed;
 
-    // Left paddle: human (W/S) if two-player mode, else AI
     if (twoPlayerMode) {
       if (keys['w'] || keys['W']) leftPaddle.y -= leftPaddle.speed;
       if (keys['s'] || keys['S']) leftPaddle.y += leftPaddle.speed;
@@ -328,7 +422,6 @@
     ball.x += ball.vx;
     ball.y += ball.vy;
 
-    // top/bottom wall bounce
     if (ball.y - ball.r < 0) {
       ball.y = ball.r;
       ball.vy *= -1;
@@ -337,7 +430,6 @@
       ball.vy *= -1;
     }
 
-    // left paddle collision
     if (ball.vx < 0 &&
         ball.x - ball.r <= leftPaddle.x + leftPaddle.w &&
         ball.x - ball.r >= leftPaddle.x &&
@@ -346,7 +438,6 @@
       bounceOffPaddle(leftPaddle, 1);
     }
 
-    // right paddle collision
     if (ball.vx > 0 &&
         ball.x + ball.r >= rightPaddle.x &&
         ball.x + ball.r <= rightPaddle.x + rightPaddle.w &&
@@ -355,107 +446,247 @@
       bounceOffPaddle(rightPaddle, -1);
     }
 
-    // scoring
     if (ball.x < -30 || ball.x > W + 30) {
       handleOutOfBounds();
     }
   }
 
   function bounceOffPaddle(paddle, dirX) {
-    const relativeY = (ball.y - (paddle.y + paddle.h / 2)) / (paddle.h / 2); // -1..1
-    const bounceAngle = relativeY * (Math.PI / 3); // max 60 degrees
+    const relativeY = (ball.y - (paddle.y + paddle.h / 2)) / (paddle.h / 2);
+    const bounceAngle = relativeY * (Math.PI / 3);
     ball.speed = Math.min(ball.speed * 1.06, 13);
     ball.vx = dirX * ball.speed * Math.cos(bounceAngle);
     ball.vy = ball.speed * Math.sin(bounceAngle);
-    // nudge ball out of paddle to avoid sticking
     ball.x = dirX === 1 ? paddle.x + paddle.w + ball.r + 1 : paddle.x - ball.r - 1;
   }
 
-  // ---------- Drawing ----------
+  // ---------- Drawing helpers ----------
+  function roundRect(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  // ---------- Court (Australian Open blue hard-court) ----------
   function drawCourt() {
-    ctx.fillStyle = '#1c6b3a';
+    // outer surround (AO green run-off)
+    ctx.fillStyle = '#0d4a34';
+    ctx.fillRect(0, 0, W, H);
+    const vign = ctx.createRadialGradient(W/2, H/2, H*0.2, W/2, H/2, W*0.7);
+    vign.addColorStop(0, 'rgba(0,0,0,0)');
+    vign.addColorStop(1, 'rgba(0,0,0,0.25)');
+    ctx.fillStyle = vign;
     ctx.fillRect(0, 0, W, H);
 
-    // outer boundary
-    ctx.strokeStyle = '#f4f4f4';
-    ctx.lineWidth = 3;
-    ctx.strokeRect(20, 20, W - 40, H - 40);
+    // playing surface (AO Plexicushion blue)
+    const courtGrad = ctx.createLinearGradient(0, court.top, 0, court.bottom);
+    courtGrad.addColorStop(0, '#2f7ab8');
+    courtGrad.addColorStop(1, '#256aa1');
+    ctx.fillStyle = courtGrad;
+    ctx.fillRect(court.left, court.top, court.width, court.height);
 
-    // center service-ish line (net)
-    ctx.setLineDash([10, 10]);
-    ctx.beginPath();
-    ctx.moveTo(W / 2, 20);
-    ctx.lineTo(W / 2, H - 20);
-    ctx.strokeStyle = '#ffffffcc';
+    ctx.strokeStyle = '#f5f7fa';
+    ctx.lineCap = 'butt';
+
+    // doubles boundary (baselines + doubles sidelines)
+    ctx.lineWidth = 4;
+    ctx.strokeRect(court.left, court.top, court.width, court.height);
+
+    // singles sidelines
     ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(court.left, court.singlesTop);
+    ctx.lineTo(court.right, court.singlesTop);
+    ctx.moveTo(court.left, court.singlesBottom);
+    ctx.lineTo(court.right, court.singlesBottom);
     ctx.stroke();
-    ctx.setLineDash([]);
 
-    // center horizontal line
+    // service lines (vertical, both sides of net)
     ctx.beginPath();
-    ctx.moveTo(20, H / 2);
-    ctx.lineTo(W - 20, H / 2);
-    ctx.strokeStyle = '#ffffff55';
+    ctx.moveTo(court.serviceLeftX, court.singlesTop);
+    ctx.lineTo(court.serviceLeftX, court.singlesBottom);
+    ctx.moveTo(court.serviceRightX, court.singlesTop);
+    ctx.lineTo(court.serviceRightX, court.singlesBottom);
+    ctx.stroke();
+
+    // center service line
+    ctx.beginPath();
+    ctx.moveTo(court.serviceLeftX, court.centerY);
+    ctx.lineTo(court.serviceRightX, court.centerY);
+    ctx.stroke();
+
+    // center marks on baselines
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(court.left, court.centerY);
+    ctx.lineTo(court.left + 9, court.centerY);
+    ctx.moveTo(court.right, court.centerY);
+    ctx.lineTo(court.right - 9, court.centerY);
+    ctx.stroke();
+
+    drawNet();
+  }
+
+  function drawNet() {
+    const netTop = court.top - 8;
+    const netBottom = court.bottom + 8;
+    // posts
+    ctx.fillStyle = '#222';
+    ctx.fillRect(court.centerX - 3, netTop - 6, 6, netBottom - netTop + 12);
+    // net cord (top)
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(court.centerX, netTop);
+    ctx.lineTo(court.centerX, netTop);
+    ctx.stroke();
+    // mesh band
+    ctx.save();
+    ctx.globalAlpha = 0.85;
+    ctx.fillStyle = '#1a1a1a';
+    ctx.fillRect(court.centerX - 2, netTop, 4, netBottom - netTop);
+    ctx.strokeStyle = 'rgba(255,255,255,0.55)';
     ctx.lineWidth = 1;
+    for (let y = netTop; y <= netBottom; y += 7) {
+      ctx.beginPath();
+      ctx.moveTo(court.centerX - 2, y);
+      ctx.lineTo(court.centerX + 2, y);
+      ctx.stroke();
+    }
+    ctx.restore();
+    // top cord line
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(court.centerX - 3, netTop);
+    ctx.lineTo(court.centerX + 3, netTop);
     ctx.stroke();
   }
 
-  function drawRacquet(paddle, color) {
+  // ---------- Racquet model ----------
+  function drawRacquet(paddle, theme) {
     const cx = paddle.x + paddle.w / 2;
-    const headCY = paddle.y + paddle.h * 0.38;
-    const headRX = paddle.w * 1.15;
-    const headRY = paddle.h * 0.42;
+    const headRX = paddle.w * 1.05;
+    const headRY = paddle.h * 0.34;
+    const headCY = paddle.y + headRY + 2;
+    const throatY1 = headCY + headRY * 0.8;
+    const throatY2 = throatY1 + paddle.h * 0.09;
+    const handleBottom = paddle.y + paddle.h;
 
-    // handle
-    ctx.strokeStyle = '#5b3a22';
-    ctx.lineWidth = paddle.w * 0.55;
-    ctx.lineCap = 'round';
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,0.35)';
+    ctx.shadowBlur = 6;
+    ctx.shadowOffsetY = 3;
+
+    // throat bridge
     ctx.beginPath();
-    ctx.moveTo(cx, headCY + headRY * 0.7);
-    ctx.lineTo(cx, paddle.y + paddle.h);
-    ctx.stroke();
+    ctx.moveTo(cx - headRX * 0.55, throatY1 - 3);
+    ctx.quadraticCurveTo(cx - paddle.w * 0.55, throatY1 + 8, cx - paddle.w * 0.4, throatY2);
+    ctx.lineTo(cx + paddle.w * 0.4, throatY2);
+    ctx.quadraticCurveTo(cx + paddle.w * 0.55, throatY1 + 8, cx + headRX * 0.55, throatY1 - 3);
+    ctx.closePath();
+    ctx.fillStyle = theme.frameDark;
+    ctx.fill();
 
-    // frame (head)
+    // handle / grip
+    const gripH = handleBottom - throatY2;
+    roundRect(cx - paddle.w * 0.42, throatY2, paddle.w * 0.84, gripH, 3);
+    ctx.fillStyle = theme.grip;
+    ctx.fill();
+    ctx.restore();
+
+    // grip wrap hatching
+    ctx.save();
+    roundRect(cx - paddle.w * 0.42, throatY2, paddle.w * 0.84, gripH, 3);
+    ctx.clip();
+    ctx.strokeStyle = 'rgba(0,0,0,0.28)';
+    ctx.lineWidth = 1;
+    for (let y = throatY2 - gripH; y <= handleBottom; y += 6) {
+      ctx.beginPath();
+      ctx.moveTo(cx - paddle.w, y);
+      ctx.lineTo(cx + paddle.w, y + gripH * 0.4);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    // head frame
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,0.35)';
+    ctx.shadowBlur = 6;
+    ctx.shadowOffsetY = 3;
+    const headGrad = ctx.createLinearGradient(cx, headCY - headRY, cx, headCY + headRY);
+    headGrad.addColorStop(0, theme.frameLight);
+    headGrad.addColorStop(1, theme.frameDark);
     ctx.beginPath();
     ctx.ellipse(cx, headCY, headRX, headRY, 0, 0, Math.PI * 2);
-    ctx.fillStyle = color;
+    ctx.fillStyle = headGrad;
     ctx.fill();
-    ctx.lineWidth = 3;
-    ctx.strokeStyle = '#222';
+    ctx.restore();
+
+    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = 'rgba(0,0,0,0.55)';
+    ctx.beginPath();
+    ctx.ellipse(cx, headCY, headRX, headRY, 0, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // accent inner rim
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = theme.accent;
+    ctx.beginPath();
+    ctx.ellipse(cx, headCY, headRX - 2.5, headRY - 2.5, 0, 0, Math.PI * 2);
     ctx.stroke();
 
     // strings
     ctx.save();
     ctx.beginPath();
-    ctx.ellipse(cx, headCY, headRX - 3, headRY - 3, 0, 0, Math.PI * 2);
+    ctx.ellipse(cx, headCY, headRX - 4.5, headRY - 4.5, 0, 0, Math.PI * 2);
     ctx.clip();
-    ctx.strokeStyle = 'rgba(255,255,255,0.55)';
-    ctx.lineWidth = 1;
-    for (let i = -3; i <= 3; i++) {
+    ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+    ctx.lineWidth = 0.8;
+    const rows = 8, cols = 5;
+    for (let i = -rows; i <= rows; i++) {
       ctx.beginPath();
-      ctx.moveTo(cx - headRX, headCY + i * (headRY / 3.5));
-      ctx.lineTo(cx + headRX, headCY + i * (headRY / 3.5));
+      ctx.moveTo(cx - headRX, headCY + i * (headRY / rows));
+      ctx.lineTo(cx + headRX, headCY + i * (headRY / rows));
       ctx.stroke();
     }
-    for (let i = -2; i <= 2; i++) {
+    for (let i = -cols; i <= cols; i++) {
       ctx.beginPath();
-      ctx.moveTo(cx + i * (headRX / 2.5), headCY - headRY);
-      ctx.lineTo(cx + i * (headRX / 2.5), headCY + headRY);
+      ctx.moveTo(cx + i * (headRX / cols), headCY - headRY);
+      ctx.lineTo(cx + i * (headRX / cols), headCY + headRY);
       ctx.stroke();
     }
     ctx.restore();
   }
 
+  const leftTheme = {
+    frameLight: '#173a5e', frameDark: '#0a1e33', grip: '#0a1e33', accent: '#d4f04a',
+  };
+  const rightTheme = {
+    frameLight: '#3a3a3a', frameDark: '#111111', grip: '#111111', accent: '#d4f04a',
+  };
+
   function drawBall() {
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,0.4)';
+    ctx.shadowBlur = 5;
+    ctx.shadowOffsetY = 3;
+    const g = ctx.createRadialGradient(ball.x - 3, ball.y - 3, 1, ball.x, ball.y, ball.r);
+    g.addColorStop(0, '#eaff8f');
+    g.addColorStop(1, '#c9e62f');
     ctx.beginPath();
     ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
-    ctx.fillStyle = '#d7f542';
+    ctx.fillStyle = g;
     ctx.fill();
-    ctx.lineWidth = 1.5;
+    ctx.restore();
+    ctx.lineWidth = 1.2;
     ctx.strokeStyle = '#8fa322';
     ctx.stroke();
 
-    // seam curves for tennis-ball look
     ctx.strokeStyle = '#f4f4f4';
     ctx.lineWidth = 1.2;
     ctx.beginPath();
@@ -468,8 +699,8 @@
 
   function draw() {
     drawCourt();
-    drawRacquet(leftPaddle, '#3d7dff');
-    drawRacquet(rightPaddle, '#ff5b5b');
+    drawRacquet(leftPaddle, leftTheme);
+    drawRacquet(rightPaddle, rightTheme);
     drawBall();
   }
 
