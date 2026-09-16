@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Tennis Pong</title>
+<style>
+  :root {
+    --court: #1c6b3a;
+    --court-line: #f4f4f4;
+    --panel-bg: #10241a;
+    --accent: #e8ff5e;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: #0b1a12;
+    font-family: 'Segoe UI', Tahoma, Verdana, sans-serif;
+    color: #f2f2f2;
+    gap: 14px;
+    padding: 16px;
+  }
+  h1 {
+    margin: 0;
+    font-size: 1.6rem;
+    letter-spacing: 1px;
+    color: var(--accent);
+    text-shadow: 0 0 12px rgba(232,255,94,0.4);
+  }
+  #scoreboard {
+    display: flex;
+    gap: 24px;
+    background: var(--panel-bg);
+    border: 2px solid #2f5a3f;
+    border-radius: 10px;
+    padding: 10px 24px;
+    font-size: 1.05rem;
+    min-width: 420px;
+    justify-content: center;
+  }
+  .side {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 120px;
+  }
+  .side .label { font-size: 0.8rem; color: #9fd8b3; text-transform: uppercase; letter-spacing: 1px; }
+  .side .point { font-size: 1.8rem; font-weight: bold; color: var(--accent); }
+  .side .games { font-size: 0.85rem; color: #cfe; margin-top: 2px; }
+  .side .sets { font-size: 0.85rem; color: #7fbf94; }
+  canvas {
+    background: var(--court);
+    border: 4px solid #eee;
+    border-radius: 6px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    max-width: 92vw;
+  }
+  #status {
+    min-height: 1.4em;
+    font-size: 1rem;
+    color: var(--accent);
+    text-align: center;
+  }
+  #instructions {
+    max-width: 820px;
+    text-align: center;
+    font-size: 0.85rem;
+    color: #b8d9c3;
+    line-height: 1.5;
+  }
+  #instructions kbd {
+    background: #234;
+    padding: 2px 7px;
+    border-radius: 4px;
+    border: 1px solid #456;
+    font-size: 0.8rem;
+  }
+</style>
+</head>
+<body>
+  <h1>🎾 Tennis Pong</h1>
+
+  <div id="scoreboard">
+    <div class="side">
+      <div class="label" id="p1name">Player (You)</div>
+      <div class="point" id="p1point">Love</div>
+      <div class="games" id="p1games">Games: 0</div>
+      <div class="sets" id="p1sets">Sets: 0</div>
+    </div>
+    <div class="side">
+      <div class="label" id="p2name">Computer</div>
+      <div class="point" id="p2point">Love</div>
+      <div class="games" id="p2games">Games: 0</div>
+      <div class="sets" id="p2sets">Sets: 0</div>
+    </div>
+  </div>
+
+  <canvas id="court" width="800" height="500"></canvas>
+
+  <div id="status">Press SPACE to serve</div>
+
+  <div id="instructions">
+    <b>Controls:</b> <kbd>&uarr;</kbd> / <kbd>&darr;</kbd> move your racquet &nbsp;|&nbsp;
+    <kbd>SPACE</kbd> serve / start point &nbsp;|&nbsp;
+    <kbd>P</kbd> pause &nbsp;|&nbsp;
+    <kbd>2</kbd> toggle 2-player mode (left racquet uses <kbd>W</kbd>/<kbd>S</kbd>) &nbsp;|&nbsp;
+    <kbd>R</kbd> restart match<br>
+    Scoring follows real tennis: Love &rarr; 15 &rarr; 30 &rarr; 40 &rarr; Deuce/Advantage &rarr; Game.
+    First to 6 games (win by 2) takes a set; at 6-6 a tiebreak (first to 7, win by 2) decides it.
+    Best of 3 sets wins the match.
+  </div>
+
+<script>
+(function () {
+  const canvas = document.getElementById('court');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+
+  const statusEl = document.getElementById('status');
+  const p1NameEl = document.getElementById('p1name');
+  const p2NameEl = document.getElementById('p2name');
+  const p1PointEl = document.getElementById('p1point');
+  const p2PointEl = document.getElementById('p2point');
+  const p1GamesEl = document.getElementById('p1games');
+  const p2GamesEl = document.getElementById('p2games');
+  const p1SetsEl = document.getElementById('p1sets');
+  const p2SetsEl = document.getElementById('p2sets');
+
+  // ---------- Game objects ----------
+  const PADDLE_W = 14, PADDLE_H = 90, PADDLE_SPEED = 6.5;
+  const BALL_R = 9;
+
+  const leftPaddle = { x: 24, y: H / 2 - PADDLE_H / 2, w: PADDLE_W, h: PADDLE_H, dy: 0, speed: PADDLE_SPEED };
+  const rightPaddle = { x: W - 24 - PADDLE_W, y: H / 2 - PADDLE_H / 2, w: PADDLE_W, h: PADDLE_H, dy: 0, speed: PADDLE_SPEED };
+
+  const ball = { x: W / 2, y: H / 2, r: BALL_R, vx: 0, vy: 0, speed: 5.5 };
+
+  let twoPlayerMode = false; // false = left paddle is AI, right paddle is human (arrows)
+  let paused = false;
+  let pointInPlay = false;
+  let servingSide = 0; // 0 = left serves, 1 = right serves
+  let matchOver = false;
+
+  const keys = {};
+
+  // ---------- Tennis scoring ----------
+  const POINT_NAMES = ['Love', '15', '30', '40'];
+  const match = {
+    points: [0, 0],   // current game points
+    games: [0, 0],    // current set games
+    sets: [0, 0],     // sets won
+    tiebreak: false,
+    tbPoints: [0, 0],
+  };
+
+  function resetMatch() {
+    match.points = [0, 0];
+    match.games = [0, 0];
+    match.sets = [0, 0];
+    match.tiebreak = false;
+    match.tbPoints = [0, 0];
+    matchOver = false;
+    updateScoreboardLabels();
+    renderScore();
+    statusEl.textContent = 'Press SPACE to serve';
+  }
+
+  function updateScoreboardLabels() {
+    p1NameEl.textContent = twoPlayerMode ? 'Player 1 (Left)' : 'Player (You)';
+    p2NameEl.textContent = twoPlayerMode ? 'Player 2 (Right)' : 'Computer';
+  }
+
+  function pointDisplay(i) {
+    const other = i === 0 ? 1 : 0;
+    if (match.tiebreak) return String(match.tbPoints[i]);
+    const p = match.points[i];
+    const o = match.points[other];
+    if (p >= 3 && o >= 3) {
+      if (p === o) return 'Deuce';
+      return p > o ? 'Ad' : '—';
+    }
+    return POINT_NAMES[p] || '40';
+  }
+
+  function renderScore() {
+    p1PointEl.textContent = pointDisplay(0);
+    p2PointEl.textContent = pointDisplay(1);
+    p1GamesEl.textContent = 'Games: ' + match.games[0];
+    p2GamesEl.textContent = 'Games: ' + match.games[1];
+    p1SetsEl.textContent = 'Sets: ' + match.sets[0];
+    p2SetsEl.textContent = 'Sets: ' + match.sets[1];
+  }
+
+  function awardPoint(scorer) {
+    if (matchOver) return;
+    if (match.tiebreak) {
+      match.tbPoints[scorer]++;
+      const a = match.tbPoints[scorer], b = match.tbPoints[scorer === 0 ? 1 : 0];
+      if (a >= 7 && a - b >= 2) {
+        winSet(scorer);
+      }
+    } else {
+      match.points[scorer]++;
+      const a = match.points[scorer], b = match.points[scorer === 0 ? 1 : 0];
+      if (a >= 4 && a - b >= 2) {
+        winGame(scorer);
+      }
+    }
+    renderScore();
+  }
+
+  function winGame(winner) {
+    match.games[winner]++;
+    match.points = [0, 0];
+    const g0 = match.games[0], g1 = match.games[1];
+    if (g0 === 6 && g1 === 6) {
+      match.tiebreak = true;
+      match.tbPoints = [0, 0];
+      statusEl.textContent = 'Tiebreak! First to 7, win by 2.';
+    } else if ((g0 >= 6 || g1 >= 6) && Math.abs(g0 - g1) >= 2) {
+      winSet(winner);
+    }
+  }
+
+  function winSet(winner) {
+    match.sets[winner]++;
+    match.games = [0, 0];
+    match.points = [0, 0];
+    match.tiebreak = false;
+    match.tbPoints = [0, 0];
+    if (match.sets[winner] >= 2) {
+      matchOver = true;
+      const name = winner === 0 ? p1NameEl.textContent : p2NameEl.textContent;
+      statusEl.textContent = `🏆 ${name} wins the match! Press R to play again.`;
+    } else {
+      statusEl.textContent = `Set to ${winner === 0 ? p1NameEl.textContent : p2NameEl.textContent}! Press SPACE to serve.`;
+    }
+  }
+
+  // ---------- Serving / ball reset ----------
+  function serveBall() {
+    ball.x = W / 2;
+    ball.y = H / 2;
+    const dir = servingSide === 0 ? 1 : -1;
+    const angle = (Math.random() * 0.6 - 0.3); // slight vertical variance
+    ball.speed = 5.5;
+    ball.vx = dir * ball.speed * Math.cos(angle);
+    ball.vy = ball.speed * Math.sin(angle);
+    pointInPlay = true;
+    statusEl.textContent = '';
+  }
+
+  function handleOutOfBounds() {
+    pointInPlay = false;
+    let scorer;
+    if (ball.x < 0) {
+      scorer = 1; // right side scores
+      servingSide = 1;
+    } else {
+      scorer = 0; // left side scores
+      servingSide = 0;
+    }
+    awardPoint(scorer);
+    ball.vx = 0;
+    ball.vy = 0;
+    ball.x = W / 2;
+    ball.y = H / 2;
+    if (!matchOver) {
+      statusEl.textContent = (statusEl.textContent || '') || 'Press SPACE to serve';
+      if (!/wins|Tiebreak|Set to/.test(statusEl.textContent)) {
+        statusEl.textContent = 'Press SPACE to serve';
+      }
+    }
+  }
+
+  // ---------- Input ----------
+  window.addEventListener('keydown', (e) => {
+    keys[e.key] = true;
+    if (e.key === ' ') {
+      e.preventDefault();
+      if (matchOver) return;
+      if (!pointInPlay) serveBall();
+    } else if (e.key === 'p' || e.key === 'P') {
+      paused = !paused;
+      statusEl.textContent = paused ? 'Paused' : '';
+    } else if (e.key === 'r' || e.key === 'R') {
+      resetMatch();
+    } else if (e.key === '2') {
+      twoPlayerMode = !twoPlayerMode;
+      updateScoreboardLabels();
+      statusEl.textContent = twoPlayerMode
+        ? '2-Player mode: Left = W/S, Right = Arrow Keys'
+        : '1-Player mode: Arrow Keys control your racquet';
+    }
+    if (['ArrowUp', 'ArrowDown', ' '].includes(e.key)) e.preventDefault();
+  });
+  window.addEventListener('keyup', (e) => { keys[e.key] = false; });
+
+  function updatePaddles() {
+    // Right paddle: always human via arrow keys
+    if (keys['ArrowUp']) rightPaddle.y -= rightPaddle.speed;
+    if (keys['ArrowDown']) rightPaddle.y += rightPaddle.speed;
+
+    // Left paddle: human (W/S) if two-player mode, else AI
+    if (twoPlayerMode) {
+      if (keys['w'] || keys['W']) leftPaddle.y -= leftPaddle.speed;
+      if (keys['s'] || keys['S']) leftPaddle.y += leftPaddle.speed;
+    } else {
+      const target = ball.y - leftPaddle.h / 2;
+      const center = leftPaddle.y;
+      const diff = target - center;
+      const aiSpeed = leftPaddle.speed * 0.72; // slightly imperfect AI
+      if (Math.abs(diff) > 4) {
+        leftPaddle.y += Math.sign(diff) * Math.min(aiSpeed, Math.abs(diff));
+      }
+    }
+
+    leftPaddle.y = Math.max(0, Math.min(H - leftPaddle.h, leftPaddle.y));
+    rightPaddle.y = Math.max(0, Math.min(H - rightPaddle.h, rightPaddle.y));
+  }
+
+  function updateBall() {
+    if (!pointInPlay) return;
+    ball.x += ball.vx;
+    ball.y += ball.vy;
+
+    // top/bottom wall bounce
+    if (ball.y - ball.r < 0) {
+      ball.y = ball.r;
+      ball.vy *= -1;
+    } else if (ball.y + ball.r > H) {
+      ball.y = H - ball.r;
+      ball.vy *= -1;
+    }
+
+    // left paddle collision
+    if (ball.vx < 0 &&
+        ball.x - ball.r <= leftPaddle.x + leftPaddle.w &&
+        ball.x - ball.r >= leftPaddle.x &&
+        ball.y >= leftPaddle.y &&
+        ball.y <= leftPaddle.y + leftPaddle.h) {
+      bounceOffPaddle(leftPaddle, 1);
+    }
+
+    // right paddle collision
+    if (ball.vx > 0 &&
+        ball.x + ball.r >= rightPaddle.x &&
+        ball.x + ball.r <= rightPaddle.x + rightPaddle.w &&
+        ball.y >= rightPaddle.y &&
+        ball.y <= rightPaddle.y + rightPaddle.h) {
+      bounceOffPaddle(rightPaddle, -1);
+    }
+
+    // scoring
+    if (ball.x < -30 || ball.x > W + 30) {
+      handleOutOfBounds();
+    }
+  }
+
+  function bounceOffPaddle(paddle, dirX) {
+    const relativeY = (ball.y - (paddle.y + paddle.h / 2)) / (paddle.h / 2); // -1..1
+    const bounceAngle = relativeY * (Math.PI / 3); // max 60 degrees
+    ball.speed = Math.min(ball.speed * 1.06, 13);
+    ball.vx = dirX * ball.speed * Math.cos(bounceAngle);
+    ball.vy = ball.speed * Math.sin(bounceAngle);
+    // nudge ball out of paddle to avoid sticking
+    ball.x = dirX === 1 ? paddle.x + paddle.w + ball.r + 1 : paddle.x - ball.r - 1;
+  }
+
+  // ---------- Drawing ----------
+  function drawCourt() {
+    ctx.fillStyle = '#1c6b3a';
+    ctx.fillRect(0, 0, W, H);
+
+    // outer boundary
+    ctx.strokeStyle = '#f4f4f4';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(20, 20, W - 40, H - 40);
+
+    // center service-ish line (net)
+    ctx.setLineDash([10, 10]);
+    ctx.beginPath();
+    ctx.moveTo(W / 2, 20);
+    ctx.lineTo(W / 2, H - 20);
+    ctx.strokeStyle = '#ffffffcc';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // center horizontal line
+    ctx.beginPath();
+    ctx.moveTo(20, H / 2);
+    ctx.lineTo(W - 20, H / 2);
+    ctx.strokeStyle = '#ffffff55';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  function drawRacquet(paddle, color) {
+    const cx = paddle.x + paddle.w / 2;
+    const headCY = paddle.y + paddle.h * 0.38;
+    const headRX = paddle.w * 1.15;
+    const headRY = paddle.h * 0.42;
+
+    // handle
+    ctx.strokeStyle = '#5b3a22';
+    ctx.lineWidth = paddle.w * 0.55;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(cx, headCY + headRY * 0.7);
+    ctx.lineTo(cx, paddle.y + paddle.h);
+    ctx.stroke();
+
+    // frame (head)
+    ctx.beginPath();
+    ctx.ellipse(cx, headCY, headRX, headRY, 0, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = '#222';
+    ctx.stroke();
+
+    // strings
+    ctx.save();
+    ctx.beginPath();
+    ctx.ellipse(cx, headCY, headRX - 3, headRY - 3, 0, 0, Math.PI * 2);
+    ctx.clip();
+    ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+    ctx.lineWidth = 1;
+    for (let i = -3; i <= 3; i++) {
+      ctx.beginPath();
+      ctx.moveTo(cx - headRX, headCY + i * (headRY / 3.5));
+      ctx.lineTo(cx + headRX, headCY + i * (headRY / 3.5));
+      ctx.stroke();
+    }
+    for (let i = -2; i <= 2; i++) {
+      ctx.beginPath();
+      ctx.moveTo(cx + i * (headRX / 2.5), headCY - headRY);
+      ctx.lineTo(cx + i * (headRX / 2.5), headCY + headRY);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function drawBall() {
+    ctx.beginPath();
+    ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
+    ctx.fillStyle = '#d7f542';
+    ctx.fill();
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = '#8fa322';
+    ctx.stroke();
+
+    // seam curves for tennis-ball look
+    ctx.strokeStyle = '#f4f4f4';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.arc(ball.x - ball.r * 0.4, ball.y, ball.r * 0.9, -0.9, 0.9);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(ball.x + ball.r * 0.4, ball.y, ball.r * 0.9, Math.PI - 0.9, Math.PI + 0.9);
+    ctx.stroke();
+  }
+
+  function draw() {
+    drawCourt();
+    drawRacquet(leftPaddle, '#3d7dff');
+    drawRacquet(rightPaddle, '#ff5b5b');
+    drawBall();
+  }
+
+  // ---------- Main loop ----------
+  function loop() {
+    if (!paused && !matchOver) {
+      updatePaddles();
+      updateBall();
+    }
+    draw();
+    requestAnimationFrame(loop);
+  }
+
+  resetMatch();
+  draw();
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
