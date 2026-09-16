@@ -28,3 +28,12 @@ Key subsystems, in the order they appear in the script:
 6. **Effects** (`particles`, `rings`, `shake`, `edgeFlash`) — lightweight, self-expiring arrays updated in `update()` and drawn in `drawEffects()`; a new effect is added by pushing an object with a `life` field and letting the existing decay loop clean it up.
 
 When changing gameplay constants (paddle size/speed, ball speed, AI behavior), they're grouped near the top of the relevant subsystem (e.g. `PADDLE_W/H/SPEED` near "Entities", tunable multipliers inline in `bounceOff`/`moveAI`) rather than centralized in one config block.
+
+## Git workflow
+
+This project's only backup is Git — commit and push regularly so work is never lost to a crashed session, a bad edit, or an interrupted task:
+
+- **Commit after every meaningful change** (a working feature, a fixed bug, a completed visual pass) — don't let multiple unrelated changes pile up uncommitted. A change that leaves the game in a broken state is still worth committing on its own branch/WIP commit rather than left uncommitted.
+- **Write clean, specific commit messages**: a short imperative summary line (e.g. `Add tiebreak serve rotation`, `Fix scoreboard swapping player rows`), with a body only if the "why" isn't obvious from the diff. Avoid vague messages like `updates` or `fixes`.
+- **Push after committing** whenever a remote is configured, so progress survives even if the local checkout is lost. If no remote exists yet, that's a sign one should be set up (e.g. `gh repo create`) rather than continuing to accumulate only-local commits.
+- **Before any destructive Git operation** (`reset --hard`, `checkout --`, force-push), make sure everything worth keeping is already committed.
